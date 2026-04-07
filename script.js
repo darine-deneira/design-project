@@ -7,6 +7,10 @@
 const urlParams = new URLSearchParams(window.location.search);
 let currentLang = urlParams.get('lang') || 'id';
 
+// True when this page was opened from another prototype via ?asset=
+const _launchedExternally = !!urlParams.get('asset');
+function _backToOrigin() { history.back(); }
+
 function toggleLang() {
   currentLang = currentLang === 'id' ? 'en' : 'id';
   const url = new URL(window.location);
@@ -30,6 +34,26 @@ function applyLang() {
 }
 
 // ===== Screen Navigation =====
+let _selectTokenReferrer = 'screen-landing';
+let _setupReferrer = 'screen-landing';
+
+function openSelectToken(fromScreen) {
+  _selectTokenReferrer = fromScreen;
+  showScreen('screen-select-token');
+}
+
+function goBackFromSelectToken() {
+  selectedTokenKeys = [];
+  document.querySelectorAll('#screen-select-token .token-row').forEach(row => {
+    row.classList.remove('selected');
+    const cb = row.querySelector('.token-checkbox');
+    if (cb) cb.classList.remove('checked');
+  });
+  const cta = document.getElementById('st-cta');
+  if (cta) { cta.style.opacity = '0.4'; cta.style.pointerEvents = 'none'; cta.textContent = 'Lanjutkan'; }
+  showScreen(_selectTokenReferrer);
+}
+
 function showScreen(id, pushHistory = true) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const screen = document.getElementById(id);
@@ -180,8 +204,9 @@ const assetIcons = {
 };
 
 // ===== Go to Setup =====
-function goToSetup(assetKey) {
+function goToSetup(assetKey, fromScreen = 'screen-landing') {
   selectedAsset = assetKey;
+  _setupReferrer = fromScreen;
   const asset = assets[assetKey] || assets.paxg;
 
   // Update asset cell in setup screen
@@ -216,8 +241,8 @@ function goToSetup(assetKey) {
   const backBtn = document.getElementById('setup-back-btn');
   const chevron = document.getElementById('setup-asset-chevron');
   const ctaBtn  = document.getElementById('setup-cta-btn');
-  if (titleEl)  titleEl.textContent = 'Buat Jadwal Auto Invest';
-  if (backBtn)  backBtn.onclick = () => showScreen('screen-landing');
+  if (titleEl)  titleEl.textContent = 'Buat Jadwal Investasi Rutin';
+  if (backBtn)  backBtn.onclick = _launchedExternally ? _backToOrigin : () => showScreen('screen-landing');
   if (chevron)  chevron.style.display = '';
   if (ctaBtn)   ctaBtn.textContent = 'Buat Jadwal';
   requestAnimationFrame(() => updateProjection());
@@ -399,7 +424,7 @@ function populateConfirmation({ isBasket, amount, schedText, assetKey, assetName
     basketFees.style.display = '';
 
     // Render per-asset rows
-    basketRows.innerHTML = '<p class="text-caption text-secondary" style="padding:8px 0 4px;">Jumlah Pembelian</p>';
+    basketRows.innerHTML = '<p class="text-caption text-secondary" style="padding:8px 16px 4px;">Jumlah Pembelian</p>';
     basketAssetsList.forEach(({ key, alloc }) => {
       const a = assets[key];
       if (!a) return;
@@ -532,6 +557,13 @@ function goToPlanDetail(plan) {
   _isPaused = false;
   const banner = document.getElementById('pd-paused-banner');
   if (banner) banner.style.display = 'none';
+  const pauseBtn = document.getElementById('pd-pause-btn');
+  if (pauseBtn) {
+    pauseBtn.className = 'btn btn-outlined';
+    pauseBtn.style.borderColor = 'var(--outline)';
+    pauseBtn.textContent = 'Pause';
+    pauseBtn.onclick = openPauseSheet;
+  }
 
   // Nav title
   const navTitle = document.getElementById('pd-nav-title');
@@ -626,7 +658,7 @@ function goToPlanDetail(plan) {
           <span class="kv-value text-body-bold" style="font-variant-numeric:tabular-nums;">${formatIDR(total)}</span>
         </div>
         <div class="kv-row" style="padding:12px 16px; border-top:1px solid var(--outline);">
-          <span class="kv-label">${ticker} Terbeli via Auto Invest</span>
+          <span class="kv-label">${ticker} Terbeli via Investasi Rutin</span>
           <span class="kv-value text-body-bold" style="font-variant-numeric:tabular-nums;">${ticker} ${qty}</span>
         </div>
         <div class="kv-row" style="padding:12px 16px; border-top:1px solid var(--outline);">
@@ -1115,6 +1147,7 @@ let _basketAddMode = false;
 
 function openSelectTokenForBasket() {
   _basketAddMode = true;
+  _selectTokenReferrer = 'screen-setup-basket';
   // Pre-check already-selected assets
   const existingKeys = selectedBasketAssets.map(a => a.key);
   selectedTokenKeys = [...existingKeys];
@@ -1161,7 +1194,7 @@ function confirmTokenSelection() {
 
   if (selectedTokenKeys.length === 1) {
     // Single asset → go to normal setup
-    goToSetup(selectedTokenKeys[0]);
+    goToSetup(selectedTokenKeys[0], 'screen-select-token');
   } else {
     // Multiple assets → go to basket setup with custom selection
     goToCustomBasketSetup(selectedTokenKeys);
@@ -1258,9 +1291,9 @@ function goToBasketSetup(basketKey) {
   const navTitle = document.querySelector('#screen-setup-basket .nav-bar .text-body-bold');
   const backBtn  = document.querySelector('#screen-setup-basket .nav-bar .icon-btn');
   const ctaBtn   = document.getElementById('bskt-cta');
-  if (navTitle) navTitle.textContent = 'Buat Jadwal Auto Invest';
+  if (navTitle) navTitle.textContent = 'Buat Jadwal Investasi Rutin';
   if (backBtn)  backBtn.onclick = () => showScreen('screen-landing');
-  if (ctaBtn)   ctaBtn.textContent = 'Buat Jadwal Auto Invest';
+  if (ctaBtn)   ctaBtn.textContent = 'Buat Jadwal Investasi Rutin';
 
   // Preset basket: lock the name input
   const nameInput = document.getElementById('bskt-name');
@@ -1312,9 +1345,9 @@ function goToCustomBasketSetup(keys) {
   const navTitle = document.querySelector('#screen-setup-basket .nav-bar .text-body-bold');
   const backBtn  = document.querySelector('#screen-setup-basket .nav-bar .icon-btn');
   const ctaBtn   = document.getElementById('bskt-cta');
-  if (navTitle) navTitle.textContent = 'Buat Jadwal Auto Invest';
-  if (backBtn)  backBtn.onclick = () => showScreen('screen-select-token');
-  if (ctaBtn)   ctaBtn.textContent = 'Buat Jadwal Auto Invest';
+  if (navTitle) navTitle.textContent = 'Buat Jadwal Investasi Rutin';
+  if (backBtn)  backBtn.onclick = () => { _basketAddMode = false; showScreen('screen-select-token'); };
+  if (ctaBtn)   ctaBtn.textContent = 'Buat Jadwal Investasi Rutin';
 
   showScreen('screen-setup-basket');
 }
@@ -1562,6 +1595,11 @@ function drawPlanSparklines() {
 
 // ===== Pause & Delete Sheet =====
 
+function openNilaiInfoSheet() {
+  closeAllSheets();
+  _openSheet('nilai-info-sheet');
+}
+
 function _openSheet(sheetId) {
   document.getElementById('sheet-overlay').style.display = '';
   document.getElementById(sheetId).style.display = '';
@@ -1592,7 +1630,7 @@ function showSnackbar(msg) {
 
 function closeAllSheets() {
   document.getElementById('sheet-overlay').style.display = 'none';
-  ['pause-sheet','delete-sheet','alloc-info-sheet'].forEach(id => {
+  ['pause-sheet','delete-sheet','alloc-info-sheet','nilai-info-sheet'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -1759,7 +1797,7 @@ function goToEditSetup() {
     const titleEl = document.querySelector('#screen-setup-basket .nav-bar .text-body-bold');
     const backBtn = document.querySelector('#screen-setup-basket .nav-bar .icon-btn');
     const ctaBtn  = document.getElementById('bskt-cta');
-    if (titleEl) titleEl.textContent = 'Ubah Jadwal Auto Invest';
+    if (titleEl) titleEl.textContent = 'Ubah Jadwal Investasi Rutin';
     if (backBtn) backBtn.onclick = () => showScreen('screen-plan-detail');
     if (ctaBtn)  ctaBtn.textContent = 'Ubah Jadwal';
 
@@ -1805,7 +1843,7 @@ function goToEditSetup() {
     const backBtn = document.getElementById('setup-back-btn');
     const chevron = document.getElementById('setup-asset-chevron');
     const ctaBtn  = document.getElementById('setup-cta-btn');
-    if (titleEl)  titleEl.textContent = 'Ubah Jadwal Auto Invest';
+    if (titleEl)  titleEl.textContent = 'Ubah Jadwal Investasi Rutin';
     if (backBtn)  backBtn.onclick = () => showScreen('screen-plan-detail');
     if (chevron)  chevron.style.display = 'none';
     if (ctaBtn)   ctaBtn.textContent = 'Ubah Jadwal';
@@ -1831,7 +1869,27 @@ function confirmPause() {
   _isPaused = true;
   const banner = document.getElementById('pd-paused-banner');
   if (banner) banner.style.display = '';
+  const btn = document.getElementById('pd-pause-btn');
+  if (btn) {
+    btn.className = 'btn btn-primary';
+    btn.style.borderColor = '';
+    btn.textContent = 'Resume';
+    btn.onclick = resumePlan;
+  }
   closeAllSheets();
+}
+
+function resumePlan() {
+  _isPaused = false;
+  const banner = document.getElementById('pd-paused-banner');
+  if (banner) banner.style.display = 'none';
+  const btn = document.getElementById('pd-pause-btn');
+  if (btn) {
+    btn.className = 'btn btn-outlined';
+    btn.style.borderColor = 'var(--outline)';
+    btn.textContent = 'Pause';
+    btn.onclick = openPauseSheet;
+  }
 }
 
 function openDeleteSheet() {
@@ -1859,6 +1917,13 @@ document.addEventListener('DOMContentLoaded', () => {
   updateProjection();
   drawPlanSparklines();
   restorePlansFromStorage();
+
+  // If launched from another prototype with ?asset=xxx, go straight to setup with that asset pre-selected
+  const assetParam = urlParams.get('asset');
+  if (assetParam && assets[assetParam]) {
+    goToSetup(assetParam);
+    return;
+  }
 
   // Initialize history so the first screen is tracked
   const activeScreen = document.querySelector('.screen.active');

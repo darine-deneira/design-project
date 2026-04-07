@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Auto Invest — DCA Improvement</title>
+  <title>Investasi Rutin — DCA Improvement</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -30,14 +30,14 @@
         <button class="icon-btn" aria-label="Kembali">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <span class="text-body-bold" data-en="Auto Invest" data-id="Auto Invest">Auto Invest</span>
+        <span></span>
         <button class="icon-btn" aria-label="Informasi">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M12 11v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="8" r="0.75" fill="currentColor"/></svg>
         </button>
       </header>
 
       <div class="page-title-section">
-        <p class="text-heading-lg">Auto Invest</p>
+        <p class="text-heading-lg">Investasi Rutin</p>
         <p class="text-body text-secondary">Investasi harian yang berkembang jadi keuntungan jangka panjang</p>
       </div>
 
@@ -279,7 +279,7 @@
 
       <!-- Fixed Footer CTAs -->
       <div class="fixed-footer">
-        <button class="btn btn-outlined" onclick="showScreen('screen-select-token')">Jelajahi Aset Lainnya</button>
+        <button class="btn btn-outlined" onclick="openSelectToken('screen-landing')">Jelajahi Aset Lainnya</button>
         <button class="btn btn-subdued" onclick="goToMyPlans()">Lihat Rencana Saya</button>
       </div>
     </div>
@@ -302,7 +302,7 @@
         <button class="icon-btn" aria-label="Kembali" id="setup-back-btn" onclick="showScreen('screen-landing')">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <span class="text-body-bold" id="setup-nav-title" data-en="Buat Jadwal Auto Invest" data-id="Buat Jadwal Auto Invest">Buat Jadwal Auto Invest</span>
+        <span class="text-body-bold" id="setup-nav-title" data-en="Create Auto Invest Schedule" data-id="Buat Jadwal Investasi Rutin">Buat Jadwal Investasi Rutin</span>
         <div style="width:40px;"></div>
       </header>
 
@@ -311,7 +311,7 @@
         <!-- Asset Selector -->
         <div class="section">
           <p class="text-body-bold" data-en="Asset" data-id="Aset">Aset</p>
-          <div class="asset-cell" onclick="showScreen('screen-select-token')">
+          <div class="asset-cell" onclick="openSelectToken('screen-setup')">
             <div class="asset-cell-icon" id="setup-asset-icon">
               <svg width="40" height="40" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#E5A310"/><text x="20" y="20" text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="700" fill="white">Au</text></svg>
             </div>
@@ -416,7 +416,7 @@
         <button class="icon-btn" aria-label="Kembali" id="conf-back-btn" onclick="showScreen('screen-setup')">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <span class="text-body-bold">Konfirmasi Auto Invest</span>
+        <span class="text-body-bold">Konfirmasi Investasi Rutin</span>
         <div style="width:40px;"></div>
       </header>
 
@@ -435,7 +435,7 @@
           <span class="kv-value" id="conf-asset-cell" style="display:flex; align-items:center; gap:6px; justify-content:flex-end;"></span>
         </div>
         <div class="kv-row" id="conf-row-name" style="display:none;">
-          <span class="kv-label">Nama Auto Invest</span>
+          <span class="kv-label">Nama Investasi Rutin</span>
           <span class="kv-value" id="conf-basket-name" style="font-variant-numeric:tabular-nums;">—</span>
         </div>
         <div class="kv-row">
@@ -467,29 +467,23 @@
         <!-- Single: simple fee row -->
         <div id="conf-single-fees">
           <div class="kv-row">
-            <span class="kv-label" style="display:flex; align-items:center; gap:4px;">
-              Biaya
-              <button class="icon-btn-sm" aria-label="Info biaya">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="var(--ink-tertiary)" stroke-width="1"/><path d="M7 6v3.5" stroke="var(--ink-tertiary)" stroke-width="1" stroke-linecap="round"/><circle cx="7" cy="4.5" r="0.6" fill="var(--ink-tertiary)"/></svg>
-              </button>
-            </span>
+            <span class="kv-label">Biaya</span>
             <span class="kv-value" style="font-variant-numeric:tabular-nums;">Rp 0</span>
           </div>
         </div>
         <!-- Basket: simple Biaya Rp 0 row -->
         <div id="conf-basket-fees" style="display:none;">
           <div class="kv-row">
-            <span class="kv-label" style="display:flex; align-items:center; gap:4px;">
-              Biaya
-              <button class="icon-btn-sm" aria-label="Info biaya">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="var(--ink-tertiary)" stroke-width="1"/><path d="M7 6v3.5" stroke="var(--ink-tertiary)" stroke-width="1" stroke-linecap="round"/><circle cx="7" cy="4.5" r="0.6" fill="var(--ink-tertiary)"/></svg>
-              </button>
-            </span>
+            <span class="kv-label">Biaya</span>
             <span class="kv-value" style="font-variant-numeric:tabular-nums;">Rp 0</span>
           </div>
         </div>
+      </div>
 
-        <div class="kv-row" style="border-top: 1px solid var(--outline); margin-top: 4px;">
+      <div class="divider"></div>
+
+      <div class="conf-section">
+        <div class="kv-row">
           <span class="kv-label text-body-bold">Jumlah yang kamu bayar</span>
           <span class="kv-value text-body-bold" id="conf-total" style="font-variant-numeric:tabular-nums;">Rp 0</span>
         </div>
@@ -523,7 +517,7 @@
         </div>
         <div style="text-align:center; display:flex; flex-direction:column; gap:8px;">
           <p class="text-heading-lg" id="success-msg" data-en="PAXG Regular Savings Successfully Scheduled!" data-id="Nabung Rutin PAXG Berhasil Dijadwalkan!">Nabung Rutin PAXG Berhasil Dijadwalkan!</p>
-          <p class="text-body text-secondary" data-en="Your auto invest schedule has been set." data-id="Jadwal Auto Invest kamu sudah aktif.">Jadwal Auto Invest kamu sudah aktif.</p>
+          <p class="text-body text-secondary" data-en="Your auto invest schedule has been set." data-id="Jadwal Investasi Rutin kamu sudah aktif.">Jadwal Investasi Rutin kamu sudah aktif.</p>
         </div>
         <button class="btn btn-primary" onclick="goToMyPlans()" data-en="OK" data-id="OK" style="width:100%">OK</button>
       </div>
@@ -547,7 +541,7 @@
         <button class="icon-btn" aria-label="Kembali" onclick="showScreen('screen-landing')">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <span class="text-body-bold" data-en="Auto Invest" data-id="Auto Invest">Auto Invest</span>
+        <span class="text-body-bold" data-en="Auto Invest" data-id="Investasi Rutin">Investasi Rutin</span>
         <div style="width:40px;"></div>
       </header>
 
@@ -565,7 +559,7 @@
         <div id="plan-filter-empty" style="display:none; flex-direction:column; align-items:center; gap:12px; padding:48px var(--screen-padding) 24px;">
           <div style="text-align:center; display:flex; flex-direction:column; gap:4px;">
             <p class="text-body-bold" id="plan-filter-empty-title">Belum ada jadwal Single Aset</p>
-            <p class="text-caption text-secondary">Buat jadwal baru untuk mulai Auto Invest.</p>
+            <p class="text-caption text-secondary">Buat jadwal baru untuk mulai Investasi Rutin.</p>
           </div>
         </div>
 
@@ -662,7 +656,7 @@
       </main>
 
       <div class="fixed-footer">
-        <button class="btn btn-outlined" onclick="showScreen('screen-select-token')" data-en="Create Auto Invest Schedule" data-id="Buat Jadwal Auto Invest">Buat Jadwal Auto Invest</button>
+        <button class="btn btn-outlined" onclick="openSelectToken('screen-landing')" data-en="Create Auto Invest Schedule" data-id="Buat Jadwal Investasi Rutin">Buat Jadwal Investasi Rutin</button>
       </div>
     </div>
 
@@ -698,12 +692,12 @@
       <!-- Hero -->
       <div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding:16px var(--screen-padding) 12px;">
         <div style="display:flex; align-items:center; gap:6px;">
-          <p class="text-caption text-secondary">Nilai Auto Invest Sekarang</p>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="var(--ink-tertiary)" stroke-width="1"/><path d="M7 6v3.5" stroke="var(--ink-tertiary)" stroke-width="1" stroke-linecap="round"/><circle cx="7" cy="4.5" r="0.6" fill="var(--ink-tertiary)"/></svg>
+          <p class="text-caption text-secondary">Nilai Investasi Rutin Sekarang</p>
+          <svg onclick="openNilaiInfoSheet()" style="cursor:pointer; flex-shrink:0;" width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="var(--ink-tertiary)" stroke-width="1"/><path d="M7 6v3.5" stroke="var(--ink-tertiary)" stroke-width="1" stroke-linecap="round"/><circle cx="7" cy="4.5" r="0.6" fill="var(--ink-tertiary)"/></svg>
         </div>
         <p class="text-display-lg" id="pd-current-value" style="font-variant-numeric:tabular-nums;">Rp 1.254.800</p>
         <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
-          <p class="text-caption text-secondary">PnL Auto Invest</p>
+          <p class="text-caption text-secondary">PnL Investasi Rutin</p>
           <p class="text-caption-bold text-green" id="pd-pnl" style="font-variant-numeric:tabular-nums;">+Rp 139.800 (12,48%)</p>
         </div>
       </div>
@@ -714,11 +708,11 @@
         <div style="display:flex; gap:16px; padding:8px var(--screen-padding) 4px; flex-wrap:wrap;">
           <div style="display:flex; align-items:center; gap:5px;">
             <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#0A68F4"/></svg>
-            <p class="text-micro text-secondary">Nilai Portofolio Auto Invest</p>
+            <p class="text-micro text-secondary">Nilai Portofolio Investasi Rutin</p>
           </div>
           <div style="display:flex; align-items:center; gap:5px;">
             <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#9E9E9E"/></svg>
-            <p class="text-micro text-secondary">Total Modal Auto Invest</p>
+            <p class="text-micro text-secondary">Total Modal Investasi Rutin</p>
           </div>
         </div>
       </div>
@@ -732,9 +726,9 @@
       <!-- Tab: Transaksi -->
       <div class="st-tab-content active" id="pd-content-transaksi" style="flex:1; overflow-y:auto; padding-bottom:40px;">
 
-        <!-- Auto Invest Summary -->
+        <!-- Investasi Rutin Summary -->
         <div style="padding:16px var(--screen-padding) 12px;">
-          <p class="text-body-bold" style="margin-bottom:12px;">Ringkasan Auto Invest</p>
+          <p class="text-body-bold" style="margin-bottom:12px;">Ringkasan Investasi Rutin</p>
           <div class="card" id="pd-ringkasan-card" style="padding:0; overflow:hidden;"></div>
         </div>
 
@@ -753,7 +747,7 @@
       <div class="st-tab-content" id="pd-content-rencana" style="flex:1; overflow-y:auto; padding-bottom:130px;">
         <div style="padding:16px var(--screen-padding); display:flex; flex-direction:column; gap:12px;">
           <div class="card" id="pd-jadwal-card" style="display:flex; flex-direction:column; gap:0; padding:0; overflow:hidden;"></div>
-          <button class="btn btn-outlined" style="border-color:var(--outline);" onclick="openPauseSheet()">Pause</button>
+          <button class="btn btn-outlined" id="pd-pause-btn" style="border-color:var(--outline);" onclick="openPauseSheet()">Pause</button>
           <button class="btn btn-outlined" style="border-color:var(--outline);" onclick="goToEditSetup()">Ubah</button>
         </div>
       </div>
@@ -775,10 +769,10 @@
       </div>
 
       <header class="nav-bar">
-        <button class="icon-btn" aria-label="Kembali" onclick="showScreen('screen-landing')">
+        <button class="icon-btn" aria-label="Kembali" onclick="goBackFromSelectToken()">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <span class="text-body-bold" data-en="Select Asset for Auto Invest" data-id="Pilih Aset Untuk Auto Invest">Pilih Aset Untuk Auto Invest</span>
+        <span class="text-body-bold" data-en="Select Asset for Auto Invest" data-id="Pilih Aset Untuk Investasi Rutin">Pilih Aset Untuk Investasi Rutin</span>
         <div style="width:40px;"></div>
       </header>
 
@@ -1014,7 +1008,7 @@
       </main>
 
       <!-- Footer CTA -->
-      <div class="fixed-footer" style="border-top: 1px solid var(--outline);">
+      <div class="fixed-footer">
         <button class="btn btn-primary" id="st-cta" onclick="confirmTokenSelection()" style="opacity:0.4; pointer-events:none;" data-en="Continue" data-id="Lanjutkan">Lanjutkan</button>
       </div>
     </div>
@@ -1037,7 +1031,7 @@
         <button class="icon-btn" aria-label="Kembali" onclick="showScreen('screen-landing')">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <span class="text-body-bold" data-en="Auto Invest" data-id="Auto Invest">Auto Invest</span>
+        <span class="text-body-bold" data-en="Auto Invest" data-id="Investasi Rutin">Investasi Rutin</span>
         <div style="width:40px;"></div>
       </header>
 
@@ -1081,13 +1075,13 @@
             <!-- Small right ground curl -->
             <path d="M88 124 C92 120 96 122 94 126" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
           </svg>
-          <p class="text-body-bold" data-en="No Auto Invest Schedule Yet" data-id="Belum Ada Jadwal Auto Invest">Belum Ada Jadwal Auto Invest</p>
+          <p class="text-body-bold" data-en="No Auto Invest Schedule Yet" data-id="Belum Ada Jadwal Investasi Rutin">Belum Ada Jadwal Investasi Rutin</p>
         </div>
 
       </main>
 
       <div class="fixed-footer">
-        <button class="btn btn-primary" onclick="showScreen('screen-select-token')" data-en="Buat Jadwal Auto Invest" data-id="Buat Jadwal Auto Invest">Buat Jadwal Auto Invest</button>
+        <button class="btn btn-primary" onclick="openSelectToken('screen-landing')" data-en="Create Auto Invest Schedule" data-id="Buat Jadwal Investasi Rutin">Buat Jadwal Investasi Rutin</button>
       </div>
     </div>
 
@@ -1109,7 +1103,7 @@
         <button class="icon-btn" aria-label="Kembali" onclick="showScreen('screen-landing')">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <span class="text-body-bold">Buat Jadwal Auto Invest</span>
+        <span class="text-body-bold">Buat Jadwal Investasi Rutin</span>
         <button class="icon-btn" aria-label="Informasi">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M12 11v5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="8" r="0.75" fill="currentColor"/></svg>
         </button>
@@ -1117,9 +1111,9 @@
 
       <main style="padding-bottom: 120px; gap: 16px;">
 
-        <!-- Nama Auto Invest -->
+        <!-- Nama Investasi Rutin -->
         <div class="section" style="gap:4px;">
-          <p class="text-caption-bold">Nama Auto Invest</p>
+          <p class="text-caption-bold">Nama Investasi Rutin</p>
           <div class="bskt-input-wrap">
             <input type="text" class="bskt-text-input" id="bskt-name" value="Blue Chip Crypto" autocomplete="off">
           </div>
@@ -1139,6 +1133,9 @@
               autocomplete="off"
               style="font-variant-numeric:tabular-nums;"
             >
+            <button class="icon-btn-sm amount-clear" id="bskt-amount-clear" onclick="clearBasketAmount()" aria-label="Hapus nominal" style="display:none;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="var(--ink-quaternary)"/><path d="M5.5 5.5L10.5 10.5M10.5 5.5L5.5 10.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
           </div>
           <div style="display:flex; align-items:center; gap:4px;">
             <p class="text-caption text-secondary" id="bskt-min-label">Minimum <strong>Rp 22.000</strong></p>
@@ -1187,7 +1184,7 @@
           <div style="border:1px solid var(--outline); border-radius:8px; padding:16px; display:flex; flex-direction:column; gap:16px;">
             <div style="display:flex; flex-direction:column; gap:8px;">
               <div style="display:flex; flex-direction:column; gap:4px;">
-                <p class="text-caption" style="color:var(--ink-primary)">Estimasi Auto Invest</p>
+                <p class="text-caption" style="color:var(--ink-primary)">Estimasi Investasi Rutin</p>
                 <p class="text-heading-lg text-green" id="bskt-proj-value" style="font-variant-numeric:tabular-nums; font-family:var(--font-display);">Rp 0</p>
               </div>
               <p class="text-caption" style="color:var(--ink-primary);">Total modal <strong id="bskt-proj-capital" style="font-variant-numeric:tabular-nums;">Rp 0</strong></p>
@@ -1199,7 +1196,7 @@
       </main>
 
       <div class="fixed-footer">
-        <button id="bskt-cta" class="btn btn-primary" onclick="goToBasketConfirmation()">Buat Jadwal Auto Invest</button>
+        <button id="bskt-cta" class="btn btn-primary" onclick="goToBasketConfirmation()">Buat Jadwal Investasi Rutin</button>
       </div>
     </div>
 
@@ -1230,6 +1227,20 @@
     </div>
   </div>
 
+  <!-- NILAI INFO SHEET -->
+  <div id="nilai-info-sheet" style="display:none; position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:min(430px, 100%); background:var(--canvas-primary); border-radius:16px 16px 0 0; z-index:101; padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));">
+    <div style="display:flex; justify-content:center; padding:12px 0 4px;">
+      <div style="width:36px; height:4px; border-radius:2px; background:var(--outline);"></div>
+    </div>
+    <div style="padding:16px var(--screen-padding) 24px; display:flex; flex-direction:column; gap:12px; text-align:center;">
+      <p class="text-heading-lg">Nilai Investasi Rutin Sekarang</p>
+      <p class="text-body text-secondary">Nilai investasi dari jadwal investasi rutin kamu berdasarkan harga aset saat ini.</p>
+    </div>
+    <div style="padding:0 var(--screen-padding);">
+      <button class="btn btn-primary" onclick="closeAllSheets()">OK, Saya Mengerti</button>
+    </div>
+  </div>
+
   <!-- PAUSE SHEET -->
   <div id="pause-sheet" style="display:none; position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:min(430px, 100%); background:var(--canvas-primary); border-radius:16px 16px 0 0; z-index:101; padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));">
     <div style="display:flex; justify-content:center; padding:12px 0 4px;">
@@ -1238,8 +1249,8 @@
     <!-- State 1 -->
     <div id="pause-state-1">
       <div style="padding:12px var(--screen-padding) 8px; text-align:center;">
-        <p class="text-heading-lg" style="margin-bottom:8px;">Mau berhenti Auto Invest?</p>
-        <p class="text-body text-secondary">Kamu sedang dalam streak <strong>🔥 <span id="pause-streak">25</span>-hari</strong> Auto Invest.</p>
+        <p class="text-heading-lg" style="margin-bottom:8px;">Mau berhenti Investasi Rutin?</p>
+        <p class="text-body text-secondary">Kamu sedang dalam streak <strong>🔥 <span id="pause-streak">25</span>-hari</strong> Investasi Rutin.</p>
       </div>
       <div style="padding:0 var(--screen-padding) 4px;">
         <canvas id="pause-chart" style="display:block; border-radius:8px;"></canvas>
@@ -1265,8 +1276,8 @@
       </div>
       <p class="text-caption text-secondary" style="padding:10px var(--screen-padding) 12px; text-align:center;">Konsistensi adalah kunci pertumbuhan jangka panjang.</p>
       <div style="padding:0 var(--screen-padding); display:flex; flex-direction:column; gap:8px;">
-        <button class="btn btn-primary" onclick="closeAllSheets()">Lanjutkan Auto Invest</button>
-        <button class="btn btn-outlined" style="border-color:var(--outline);" onclick="showPauseState2()">Pause Auto Invest</button>
+        <button class="btn btn-primary" onclick="closeAllSheets()">Lanjutkan Investasi Rutin</button>
+        <button class="btn btn-outlined" style="border-color:var(--outline);" onclick="showPauseState2()">Pause Investasi Rutin</button>
       </div>
     </div>
     <!-- State 2 -->
@@ -1277,7 +1288,7 @@
       </div>
       <div style="padding:0 var(--screen-padding); display:flex; flex-direction:column; gap:8px;">
         <button class="btn btn-primary" onclick="goToEditSetup()">Ubah Jumlah</button>
-        <button class="btn btn-outlined" style="border-color:var(--outline);" onclick="confirmPause()">Pause Auto Invest</button>
+        <button class="btn btn-outlined" style="border-color:var(--outline);" onclick="confirmPause()">Pause Investasi Rutin</button>
       </div>
     </div>
   </div>
@@ -1290,8 +1301,8 @@
     <!-- State 1 -->
     <div id="delete-state-1">
       <div style="padding:12px var(--screen-padding) 8px; text-align:center;">
-        <p class="text-heading-lg" style="margin-bottom:8px;">Mau hapus Auto Invest?</p>
-        <p class="text-body text-secondary">Kamu sedang dalam streak <strong>🔥 <span id="delete-streak">25</span>-hari</strong> Auto Invest.</p>
+        <p class="text-heading-lg" style="margin-bottom:8px;">Mau hapus Investasi Rutin?</p>
+        <p class="text-body text-secondary">Kamu sedang dalam streak <strong>🔥 <span id="delete-streak">25</span>-hari</strong> Investasi Rutin.</p>
       </div>
       <div style="padding:0 var(--screen-padding) 4px;">
         <canvas id="delete-chart" style="display:block; border-radius:8px;"></canvas>
@@ -1317,8 +1328,8 @@
       </div>
       <p class="text-caption text-secondary" style="padding:10px var(--screen-padding) 12px; text-align:center;">Konsistensi adalah kunci pertumbuhan jangka panjang.</p>
       <div style="padding:0 var(--screen-padding); display:flex; flex-direction:column; gap:8px;">
-        <button class="btn btn-primary" onclick="closeAllSheets()">Lanjutkan Auto Invest</button>
-        <button class="btn btn-outlined" style="color:var(--red); border-color:var(--outline);" onclick="showDeleteState2()">Hapus Auto Invest</button>
+        <button class="btn btn-primary" onclick="closeAllSheets()">Lanjutkan Investasi Rutin</button>
+        <button class="btn btn-outlined" style="color:var(--red); border-color:var(--outline);" onclick="showDeleteState2()">Hapus Investasi Rutin</button>
       </div>
     </div>
     <!-- State 2 -->
@@ -1329,7 +1340,7 @@
       </div>
       <div style="padding:0 var(--screen-padding); display:flex; flex-direction:column; gap:8px;">
         <button class="btn btn-primary" onclick="goToEditSetup()">Ubah Jumlah</button>
-        <button class="btn btn-outlined" style="color:var(--red); border-color:var(--outline);" onclick="confirmDelete()">Hapus Auto Invest</button>
+        <button class="btn btn-outlined" style="color:var(--red); border-color:var(--outline);" onclick="confirmDelete()">Hapus Investasi Rutin</button>
       </div>
     </div>
   </div>

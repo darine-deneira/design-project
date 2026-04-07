@@ -481,7 +481,11 @@ main {
 }
 
 .conf-section {
-  padding: 4px var(--screen-padding);
+  padding: 0;
+}
+
+.conf-section .kv-row {
+  padding: 10px var(--screen-padding);
 }
 
 .kv-row {
