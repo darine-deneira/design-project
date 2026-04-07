@@ -3,6 +3,89 @@
  * Finance Platform Pillar
  */
 
+// ===== CoinGecko Live Prices =====
+// Maps internal asset keys → CoinGecko coin IDs (free API, no key needed)
+const _cgIdMap = {
+  btc: 'bitcoin', eth: 'ethereum', paxg: 'pax-gold', sol: 'solana',
+  bnb: 'binancecoin', ada: 'cardano', dot: 'polkadot', uni: 'uniswap',
+  aave: 'aave', atom: 'cosmos', ren: 'republic-protocol', usdt: 'tether',
+};
+
+// Fallback IDR prices — updated April 2026 (used when CoinGecko is unavailable / rate-limited)
+const _cgFallback = {
+  // Crypto — approximate Pintu/CoinGecko IDR prices April 2026
+  btc:  1131990000,  // ~Rp 1,13 M
+  eth:   33940000,   // ~Rp 33,9 jt
+  paxg:  87187000,   // ~Rp 87,2 jt (1 troy oz gold, per Pintu)
+  sol:    1474000,   // ~Rp 1,47 jt
+  bnb:   10200000,   // ~Rp 10,2 jt
+  ada:       7200,   // ~Rp 7.200
+  dot:      95000,   // ~Rp 95.000
+  uni:     180000,   // ~Rp 180.000
+  aave:   3800000,   // ~Rp 3,8 jt
+  atom:    150000,   // ~Rp 150.000
+  ren:       2500,   // ~Rp 2.500
+  usdt:     16300,   // ~Rp 16.300 (1 USD)
+  // Tokenized stocks/ETFs (USD price × ~16.300 IDR/USD, April 2026)
+  aapl:   3600000,   // ~$220
+  tsla:   4300000,   // ~$265
+  googl: 27200000,   // ~$1.670
+  msft:   6900000,   // ~$425
+  amzn:  31000000,   // ~$1.900
+  meta:  10100000,   // ~$620
+  nflx:  17000000,   // ~$1.040
+  pypl:    950000,   // ~$58
+  jpm:    3800000,   // ~$235
+  // ETFs
+  slv:     540000,   // ~$33 (Silver ETF)
+  gld:    3900000,   // ~$240 (Gold ETF)
+  agg:    1600000,   // ~$98 (Bond ETF)
+  iefa:   2200000,   // ~$135 (Intl Equity ETF)
+  tlt:    1500000,   // ~$92 (Long Bond ETF)
+};
+
+// Cache: { btc: 1520000000, eth: 53000000, ... }
+let _cgPrices = {};
+// Cache: { bitcoin: [[timestamp, price], ...], ... }  (30-day hourly)
+let _cgHistory = {};
+
+function _cgPrice(key) {
+  return _cgPrices[key] || _cgFallback[key] || 1000000;
+}
+
+async function fetchCGPrices() {
+  const ids = Object.values(_cgIdMap).join(',');
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=idr`,
+      { signal: AbortSignal.timeout(6000) }
+    );
+    if (!res.ok) return; // silently fall back
+    const data = await res.json();
+    // Map back to internal keys
+    Object.entries(_cgIdMap).forEach(([key, cgId]) => {
+      if (data[cgId]?.idr) _cgPrices[key] = data[cgId].idr;
+    });
+  } catch (_) { /* network error — use fallback */ }
+}
+
+async function fetchCGHistory(cgId) {
+  if (_cgHistory[cgId]) return _cgHistory[cgId]; // already cached
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/coins/${cgId}/market_chart?vs_currency=idr&days=30&interval=daily`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.prices && data.prices.length > 0) {
+      _cgHistory[cgId] = data.prices; // array of [timestamp, price]
+      return data.prices;
+    }
+  } catch (_) { /* silently ignore */ }
+  return null;
+}
+
 // ===== Language =====
 const urlParams = new URLSearchParams(window.location.search);
 let currentLang = urlParams.get('lang') || 'id';
@@ -532,6 +615,7 @@ function goToSuccess() {
       freq: freqLabel[selectedFreq] || 'Harian',
       scheduledTime: (() => { const n = new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; })(),
       scheduledDate: new Date(),
+      executions: 1,
     };
   }
   showScreen('screen-success');
@@ -554,15 +638,26 @@ function goToMyPlans() {
 // ===== Plan Detail =====
 function goToPlanDetail(plan) {
   _currentPlan = plan;
-  _isPaused = false;
+
+  // Check if this plan's card is currently paused
+  const card = _getPlanCard(plan);
+  _isPaused = !!(card && card.querySelector('.plan-paused-badge') && card.querySelector('.plan-paused-badge').style.display !== 'none');
+
   const banner = document.getElementById('pd-paused-banner');
-  if (banner) banner.style.display = 'none';
+  if (banner) banner.style.display = _isPaused ? '' : 'none';
   const pauseBtn = document.getElementById('pd-pause-btn');
   if (pauseBtn) {
-    pauseBtn.className = 'btn btn-outlined';
-    pauseBtn.style.borderColor = 'var(--outline)';
-    pauseBtn.textContent = 'Pause';
-    pauseBtn.onclick = openPauseSheet;
+    if (_isPaused) {
+      pauseBtn.className = 'btn btn-primary';
+      pauseBtn.style.borderColor = '';
+      pauseBtn.textContent = 'Lanjutkan Investasi Rutin';
+      pauseBtn.onclick = resumePlan;
+    } else {
+      pauseBtn.className = 'btn btn-outlined';
+      pauseBtn.style.borderColor = 'var(--outline)';
+      pauseBtn.textContent = 'Pause';
+      pauseBtn.onclick = openPauseSheet;
+    }
   }
 
   // Nav title
@@ -603,6 +698,16 @@ function goToPlanDetail(plan) {
             { key: 'btc', ticker: 'BTC', name: 'Bitcoin',  color: '#F7931A', letter: '₿', fsize: 16 },
             { key: 'eth', ticker: 'ETH', name: 'Ethereum', color: '#627EEA', letter: 'Ξ', fsize: 16 },
           ];
+
+      // Unit prices: use live CoinGecko prices with fallback to _cgFallback
+
+      const executions = plan.executions || 1;
+      planBasketAssets.forEach(a => {
+        const alloc = (plan.basketAssets?.find(b => b.key === a.key)?.alloc || (100 / planBasketAssets.length)) / 100;
+        const spent = total * alloc;
+        const price = _cgPrice(a.key);
+        a.qty = (spent / price).toFixed(5).replace('.', ',');
+      });
       const assetRows = planBasketAssets.map(a => `
         <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-top:1px solid var(--outline);">
           <svg width="36" height="36" viewBox="0 0 36 36" style="flex-shrink:0;"><circle cx="18" cy="18" r="18" fill="${a.color}"/><text x="18" y="18" text-anchor="middle" dominant-baseline="central" font-size="${a.fsize}" font-weight="700" fill="white">${a.letter}</text></svg>
@@ -641,7 +746,7 @@ function goToPlanDetail(plan) {
                   <p class="text-body-bold">${a.name}</p>
                   <p class="text-caption text-secondary">${a.ticker}</p>
                 </div>
-                <span class="kv-value text-body-bold" style="font-variant-numeric:tabular-nums;">Rp ${a.ticker === 'BTC' ? '1.048.400.000' : '18.650.000'}</span>
+                <span class="kv-value text-body-bold" style="font-variant-numeric:tabular-nums;">${formatIDR(_cgPrice(a.key))}</span>
               </div>
             `).join('')}
           </div>
@@ -649,7 +754,7 @@ function goToPlanDetail(plan) {
       `;
     } else {
       // Single asset
-      const mockUnitPrice = plan.assetKey === 'btc' ? 1500000000 : plan.assetKey === 'eth' ? 52000000 : 984600;
+      const mockUnitPrice = _cgPrice(plan.assetKey || 'btc');
       const qty = (total / mockUnitPrice).toFixed(5).replace('.', ',');
       const ticker = plan.ticker || plan.name;
       ringkasanCard.innerHTML = `
@@ -759,59 +864,54 @@ function goToPlanDetail(plan) {
     }
   }
 
-  // Transaction rows — use plan amount
+  // Transaction rows — generated from plan state
   const txList = document.getElementById('pd-tx-list');
   if (txList) {
     const amt = formatIDR(plan.amount);
-    const halfAmt = formatIDR(Math.round(plan.amount / 2));
     const ticker = plan.ticker || plan.name;
     const isMulti = plan.type === 'multi';
-    const successTitle = 'Auto Invest Berhasil';
-    const failTitle = 'Auto Invest Gagal';
-    const row2Status = isMulti
-      ? `<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#627EEA"/></svg><p class="text-caption text-secondary">1/${(plan.basketAssets || []).length || 2} Aset Terbeli</p>`
-      : `<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#25A764"/></svg><p class="text-caption text-secondary">Berhasil</p>`;
-    txList.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px var(--screen-padding);border-bottom:1px solid var(--outline);">
-        <div><p class="text-body-bold">${successTitle}</p><p class="text-caption text-secondary">06-04-2026 09:00</p></div>
-        <div style="text-align:right;flex-shrink:0;">
-          <p class="text-body-bold" style="font-variant-numeric:tabular-nums;">${amt}</p>
-          <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-top:2px;">
-            <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#25A764"/></svg>
-            <p class="text-caption text-secondary">Berhasil</p>
+    const executions = plan.executions || 1;
+
+    // Determine interval in days based on freq
+    const freqDays = { 'Per Jam': 1/24, 'Harian': 1, 'Mingguan': 7, 'Bulanan': 30 };
+    const interval = freqDays[plan.freq] || 1;
+
+    // Scheduled time string (e.g. "09:00")
+    const scheduledTime = plan.scheduledTime || '09:00';
+
+    // Build rows: most recent first
+    // For plans with many executions, show up to 10 rows; sprinkle failures on older ones
+    const maxRows = Math.min(executions, 10);
+    const failureIndices = new Set(); // all success
+
+    function txRow(daysAgo, success, reason) {
+      const d = new Date();
+      d.setDate(d.getDate() - Math.round(daysAgo));
+      const dateStr = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()} ${scheduledTime}`;
+      const title = success ? 'Auto Invest Berhasil' : 'Auto Invest Gagal';
+      const titleColor = success ? '' : 'color:var(--ink-secondary);';
+      const amtColor = success ? '' : 'text-secondary';
+      const statusDot = success
+        ? `<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#25A764"/></svg><p class="text-caption text-secondary">${isMulti ? `${(plan.basketAssets||[]).length || 2}/${(plan.basketAssets||[]).length || 2} Aset Terbeli` : 'Berhasil'}</p>`
+        : `<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#E54040"/></svg><p class="text-caption text-secondary">${reason}</p>`;
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px var(--screen-padding);border-bottom:1px solid var(--outline);">
+          <div><p class="text-body-bold" style="${titleColor}">${title}</p><p class="text-caption text-secondary">${dateStr}</p></div>
+          <div style="text-align:right;flex-shrink:0;">
+            <p class="text-body-bold ${amtColor}" style="font-variant-numeric:tabular-nums;">${amt}</p>
+            <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-top:2px;">${statusDot}</div>
           </div>
-        </div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px var(--screen-padding);border-bottom:1px solid var(--outline);">
-        <div><p class="text-body-bold">${successTitle}</p><p class="text-caption text-secondary">05-04-2026 09:00</p></div>
-        <div style="text-align:right;flex-shrink:0;">
-          <p class="text-body-bold" style="font-variant-numeric:tabular-nums;">${halfAmt}</p>
-          <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-top:2px;">
-            ${row2Status}
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px var(--screen-padding);border-bottom:1px solid var(--outline);">
-        <div><p class="text-body-bold" style="color:var(--ink-secondary);">${failTitle}</p><p class="text-caption text-secondary">04-04-2026 09:00</p></div>
-        <div style="text-align:right;flex-shrink:0;">
-          <p class="text-body-bold text-secondary" style="font-variant-numeric:tabular-nums;">${amt}</p>
-          <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-top:2px;">
-            <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#E54040"/></svg>
-            <p class="text-caption text-secondary">Saldo Tidak Mencukupi</p>
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px var(--screen-padding);border-bottom:1px solid var(--outline);">
-        <div><p class="text-body-bold" style="color:var(--ink-secondary);">${failTitle}</p><p class="text-caption text-secondary">03-04-2026 09:00</p></div>
-        <div style="text-align:right;flex-shrink:0;">
-          <p class="text-body-bold text-secondary" style="font-variant-numeric:tabular-nums;">${amt}</p>
-          <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-top:2px;">
-            <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#E54040"/></svg>
-            <p class="text-caption text-secondary">Aset Sedang Maintenance</p>
-          </div>
-        </div>
-      </div>
-    `;
+        </div>`;
+    }
+
+    const failReasons = ['Saldo Tidak Mencukupi', 'Aset Sedang Maintenance'];
+    let rows = '';
+    for (let i = 0; i < maxRows; i++) {
+      const daysAgo = i * interval;
+      const isFail = failureIndices.has(i);
+      rows += txRow(daysAgo, !isFail, failReasons[i % 2]);
+    }
+    txList.innerHTML = rows;
   }
 
   // Draw chart
@@ -842,37 +942,59 @@ function drawPlanDetailChart(plan) {
   canvas.style.height = h + 'px';
   ctx.scale(dpr, dpr);
 
-  // Derive executions count from freq
-  const freqExec = { 'Per Jam': 24, 'Harian': 30, 'Mingguan': 12, 'Bulanan': 6 };
-  const steps = freqExec[plan.freq] || 12;
-
-  // Build capital data points: grows by plan.amount each step (step function)
   const totalInvested = plan.totalInvested || plan.amount;
   const currentValue  = plan.currentValue  || plan.amount;
-  const returnRatio   = currentValue / totalInvested; // e.g. 1.12 for +12%
-
-  // Normalise: map capital 0→totalInvested and portfolio 0→currentValue onto chart height
+  const returnRatio   = currentValue / totalInvested;
   const pad = 16;
   const chartH = h - pad * 2;
 
-  const capitalData  = [];
-  const portfolioData = [];
+  // Try to use real CoinGecko price history
+  const cgId = _cgIdMap[plan.assetKey || 'btc'];
+  const hist = cgId && _cgHistory[cgId];
 
-  // Seed random for consistent noise per plan
-  let seed = plan.amount % 999 + steps;
-  const rand = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  let capitalData, portfolioData, steps;
 
-  for (let i = 0; i <= steps; i++) {
-    const progress = i / steps;
-    // Capital: step up evenly — each period adds one installment
-    const capitalVal = totalInvested * progress;
+  if (hist && hist.length >= 2) {
+    // Use real 30-day price history to build portfolio line
+    // Capital grows linearly; portfolio = dca simulation using real prices
+    steps = hist.length - 1;
+    const prices = hist.map(p => p[1]);
+    const firstPrice = prices[0];
+    capitalData = [];
+    portfolioData = [];
 
-    // Portfolio: capital × return ratio with realistic noise
-    const noise = (rand() - 0.5) * 0.08 * returnRatio;
-    const portfolioVal = capitalVal * (returnRatio + (progress < 0.05 ? 0 : noise));
+    // DCA simulation: buy plan.amount / price[i] each period
+    let totalUnits = 0;
+    let totalCapital = 0;
+    for (let i = 0; i <= steps; i++) {
+      const periodCapital = totalInvested / steps;
+      totalUnits += periodCapital / prices[i];
+      totalCapital += periodCapital;
+      capitalData.push(totalCapital);
+      portfolioData.push(totalUnits * prices[i]);
+    }
+  } else {
+    // Fallback: generate from return ratio with noise
+    const freqExec = { 'Per Jam': 24, 'Harian': 30, 'Mingguan': 12, 'Bulanan': 6 };
+    steps = freqExec[plan.freq] || 12;
+    capitalData  = [];
+    portfolioData = [];
+    let seed = plan.amount % 999 + steps;
+    const rand = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    for (let i = 0; i <= steps; i++) {
+      const progress = i / steps;
+      const capitalVal = totalInvested * progress;
+      const noise = (rand() - 0.5) * 0.08 * returnRatio;
+      capitalData.push(capitalVal);
+      portfolioData.push(capitalVal * (returnRatio + (progress < 0.05 ? 0 : noise)));
+    }
 
-    capitalData.push(capitalVal);
-    portfolioData.push(portfolioVal);
+    // If real CoinGecko data not loaded yet, fetch and redraw
+    if (cgId && !_cgHistory[cgId]) {
+      fetchCGHistory(cgId).then(h2 => {
+        if (h2) drawPlanDetailChart(plan);
+      });
+    }
   }
 
   // Scale values to pixel Y (higher value = lower Y)
@@ -984,6 +1106,8 @@ function injectNewPlanCard(plan, persist = true) {
   card.className = 'card plan-card plan-card-new';
   card.dataset.type = cardType;
   if (plan.id) card.dataset.planId = plan.id;
+  const pnlSeed = (Date.now() % 999) + 1;
+
   card.innerHTML = `
     <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:6px;">
       ${iconHtml}
@@ -991,10 +1115,15 @@ function injectNewPlanCard(plan, persist = true) {
         <p class="text-body-bold" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${plan.name}</p>
         <p class="text-caption text-secondary">${plan.freq}</p>
       </div>
-      <canvas class="plan-sparkline" data-pnl="0" data-seed="${Date.now() % 999}" style="display:block; flex-shrink:0;"></canvas>
+      <span class="plan-paused-badge" style="display:none; background:var(--canvas-secondary); border:1px solid var(--outline); border-radius:6px; padding:3px 8px; font-size:12px; font-weight:500; color:var(--ink-secondary); white-space:nowrap;">Paused</span>
     </div>
-    <p class="text-caption text-secondary" style="margin-bottom:2px;">PnL</p>
-    <p class="text-heading-lg text-green" style="font-variant-numeric:tabular-nums; margin-bottom:12px;">+Rp 0</p>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <div>
+        <p class="text-caption text-secondary" style="margin-bottom:2px;">PnL</p>
+        <p class="text-heading-lg text-green" style="font-variant-numeric:tabular-nums;">+Rp 0</p>
+      </div>
+      <canvas class="plan-sparkline" data-pnl="1" data-seed="${pnlSeed}" data-asset="${plan.assetKey || ''}" data-new="true" style="display:block;"></canvas>
+    </div>
     <div class="plan-stats">
       <div class="plan-stat">
         <p class="text-micro text-tertiary">Per Investasi</p>
@@ -1224,6 +1353,7 @@ function goToBasketConfirmation() {
     amount: basketInputAmount,
     freq: freqLabel[selectedBasketFreq] || 'Harian',
     basketAssets: selectedBasketAssets.slice(),
+    executions: 1,
   };
 
   const now2 = new Date();
@@ -1523,71 +1653,108 @@ function updateBasketProjection() {
 }
 
 // ===== Plan Card Sparklines =====
-function drawPlanSparklines() {
-  document.querySelectorAll('.plan-sparkline').forEach(canvas => {
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
-    const W = 100, H = 56;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
-    ctx.scale(dpr, dpr);
+function _drawSparklineOnCanvas(canvas, priceHistory) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = 100, H = 56;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
 
+  let points;
+  if (priceHistory && priceHistory.length >= 2) {
+    // Convert price history → DCA PnL series
+    // Simulate buying 1 unit of capital each period, track PnL = portfolio_value - invested
+    const prices = priceHistory.map(p => p[1]);
+    const n = prices.length;
+    let totalUnits = 0;
+    let totalCapital = 0;
+    points = [];
+    for (let i = 0; i < n; i++) {
+      totalUnits += 1 / prices[i];   // buy 1 IDR worth each period
+      totalCapital += 1;
+      const portfolioVal = totalUnits * prices[i];
+      points.push(portfolioVal - totalCapital); // PnL (can be negative)
+    }
+  } else {
+    // Fallback: generate from pnl seed
     const pnl = parseFloat(canvas.dataset.pnl) || 10;
     let seed = parseInt(canvas.dataset.seed) || 1;
     const rand = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
-
     const pts = 14;
-    const points = [];
+    points = [];
     let val = 0;
     for (let i = 0; i <= pts; i++) {
       val += (pnl / pts) + (rand() - 0.35) * (pnl / pts) * 0.9;
       points.push(Math.max(0, val));
     }
-    const maxV = Math.max(...points) || 1;
-    const pad = 4;
-    const chartH = H - pad * 2;
+  }
 
-    const toX = i => (i / pts) * W;
-    const toY = v => pad + chartH - (v / maxV) * chartH;
+  const pts = points.length - 1;
+  const maxV = Math.max(...points, 0) || 1;
+  const minV = Math.min(...points, 0);
+  const range = maxV - minV || 1;
+  const pad = 4;
+  const chartH = H - pad * 2;
 
-    // Green fill under line
-    ctx.beginPath();
-    ctx.moveTo(toX(0), H);
-    points.forEach((v, i) => ctx.lineTo(toX(i), toY(v)));
-    ctx.lineTo(toX(pts), H);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(37,167,100,0.15)';
-    ctx.fill();
+  const toX = i => (i / pts) * W;
+  const toY = v => pad + chartH - ((v - minV) / range) * chartH;
 
-    // Gray baseline (invested cost) — flat line at bottom quarter
-    const baseY = pad + chartH - (maxV * 0.3 / maxV) * chartH;
-    ctx.beginPath();
-    ctx.moveTo(0, baseY);
-    ctx.lineTo(W, baseY);
-    ctx.strokeStyle = 'rgba(158,158,158,0.5)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 3]);
-    ctx.stroke();
-    ctx.setLineDash([]);
+  // Determine color: green if final PnL positive, red if negative
+  const finalPnl = points[points.length - 1];
+  const isUp = finalPnl >= 0;
+  const lineColor = isUp ? '#25A764' : '#E53935';
+  const fillColor = isUp ? 'rgba(37,167,100,0.15)' : 'rgba(229,57,53,0.10)';
 
-    // Green line
-    ctx.beginPath();
-    points.forEach((v, i) => i === 0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v)));
-    ctx.strokeStyle = '#25A764';
-    ctx.lineWidth = 2;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    ctx.stroke();
+  // Fill under line
+  ctx.beginPath();
+  ctx.moveTo(toX(0), H);
+  points.forEach((v, i) => ctx.lineTo(toX(i), toY(v)));
+  ctx.lineTo(toX(pts), H);
+  ctx.closePath();
+  ctx.fillStyle = fillColor;
+  ctx.fill();
 
-    // End dot
-    const lastX = toX(pts), lastY = toY(points[pts]);
-    ctx.beginPath();
-    ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
-    ctx.fillStyle = '#25A764';
-    ctx.fill();
+  // Line
+  ctx.beginPath();
+  points.forEach((v, i) => i === 0 ? ctx.moveTo(toX(i), toY(v)) : ctx.lineTo(toX(i), toY(v)));
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // End dot
+  const lastX = toX(pts), lastY = toY(points[pts]);
+  ctx.beginPath();
+  ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+  ctx.fillStyle = lineColor;
+  ctx.fill();
+}
+
+function drawPlanSparklines() {
+  document.querySelectorAll('.plan-sparkline').forEach(canvas => {
+    // Newly created plans use seed-based fallback (positive trend) — skip real price history
+    if (canvas.dataset.new === 'true') {
+      _drawSparklineOnCanvas(canvas, null);
+      return;
+    }
+    const assetKey = canvas.dataset.asset || '';
+    const cgId = _cgIdMap[assetKey];
+    if (cgId && _cgHistory[cgId]) {
+      _drawSparklineOnCanvas(canvas, _cgHistory[cgId]);
+    } else {
+      _drawSparklineOnCanvas(canvas, null);
+      // Try to fetch history in background and redraw when ready
+      if (cgId && !_cgHistory[cgId]) {
+        fetchCGHistory(cgId).then(hist => {
+          if (hist) _drawSparklineOnCanvas(canvas, hist);
+        });
+      }
+    }
   });
 }
 
@@ -1851,6 +2018,47 @@ function goToEditSetup() {
   }
 }
 
+function _getPlanCard(plan) {
+  if (!plan) return null;
+  const main = document.querySelector('#screen-myplans main');
+  if (!main) return null;
+  // Match by plan id first
+  if (plan.id) {
+    const c = main.querySelector(`[data-plan-id="${plan.id}"]`);
+    if (c) return c;
+  }
+  // Prefer injected cards (.plan-card-new) over static hardcoded cards
+  let found = null;
+  main.querySelectorAll('.plan-card-new').forEach(c => {
+    const nameEl = c.querySelector('.text-body-bold');
+    if (nameEl && nameEl.textContent.trim() === plan.name) found = c;
+  });
+  if (found) return found;
+  // Fallback to static cards
+  main.querySelectorAll('.plan-card:not(.plan-card-new)').forEach(c => {
+    const nameEl = c.querySelector('.text-body-bold');
+    if (nameEl && nameEl.textContent.trim() === plan.name) found = c;
+  });
+  return found;
+}
+
+function _setPlanCardPaused(plan, paused) {
+  const card = _getPlanCard(plan);
+  if (!card) return;
+  let badge = card.querySelector('.plan-paused-badge');
+  // Inject badge into static cards that don't have one yet
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.className = 'plan-paused-badge';
+    badge.style.cssText = 'display:none; background:var(--canvas-secondary); border:1px solid var(--outline); border-radius:6px; padding:3px 8px; font-size:12px; font-weight:500; color:var(--ink-secondary); white-space:nowrap;';
+    badge.textContent = 'Paused';
+    // Insert into the header row (first flex div), after the name+freq div
+    const headerRow = card.querySelector('div[style*="display:flex"]');
+    if (headerRow) headerRow.appendChild(badge);
+  }
+  if (badge) badge.style.display = paused ? '' : 'none';
+}
+
 function openPauseSheet() {
   closeAllSheets();
   _openSheet('pause-sheet');
@@ -1873,13 +2081,17 @@ function confirmPause() {
   if (btn) {
     btn.className = 'btn btn-primary';
     btn.style.borderColor = '';
-    btn.textContent = 'Resume';
+    btn.textContent = 'Lanjutkan Investasi Rutin';
     btn.onclick = resumePlan;
   }
   closeAllSheets();
+
+  // Show Paused badge on the plan card
+  _setPlanCardPaused(_currentPlan, true);
 }
 
 function resumePlan() {
+  closeAllSheets();
   _isPaused = false;
   const banner = document.getElementById('pd-paused-banner');
   if (banner) banner.style.display = 'none';
@@ -1890,6 +2102,10 @@ function resumePlan() {
     btn.textContent = 'Pause';
     btn.onclick = openPauseSheet;
   }
+  // Remove Paused badge from card
+  _setPlanCardPaused(_currentPlan, false);
+  // Show snackbar confirmation
+  showSnackbar('Jadwal berhasil diubah');
 }
 
 function openDeleteSheet() {
@@ -1908,8 +2124,42 @@ function showDeleteState2() {
 
 function confirmDelete() {
   closeAllSheets();
-  showScreen('screen-myplans');
-  requestAnimationFrame(() => drawPlanSparklines());
+
+  // Remove the card from the DOM
+  if (_currentPlan) {
+    const main = document.querySelector('#screen-myplans main');
+    if (main) {
+      let card = _currentPlan.id
+        ? main.querySelector(`[data-plan-id="${_currentPlan.id}"]`)
+        : null;
+      if (!card) {
+        main.querySelectorAll('.plan-card-new').forEach(c => {
+          const nameEl = c.querySelector('.text-body-bold');
+          if (nameEl && nameEl.textContent.trim() === _currentPlan.name) card = c;
+        });
+      }
+      if (card) card.remove();
+    }
+
+    // Remove from in-memory list and persist
+    if (_currentPlan.id) {
+      _savedPlans = _savedPlans.filter(p => p.id !== _currentPlan.id);
+    } else {
+      _savedPlans = _savedPlans.filter(p => p.name !== _currentPlan.name);
+    }
+    savePlansToStorage();
+    _currentPlan = null;
+  }
+
+  // If no plans left, show empty state
+  const main = document.querySelector('#screen-myplans main');
+  const hasCards = main && main.querySelectorAll('.plan-card-new').length > 0;
+  if (!hasCards && _savedPlans.length === 0) {
+    showScreen('screen-myplans-empty');
+  } else {
+    showScreen('screen-myplans');
+    requestAnimationFrame(() => drawPlanSparklines());
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1917,6 +2167,19 @@ document.addEventListener('DOMContentLoaded', () => {
   updateProjection();
   drawPlanSparklines();
   restorePlansFromStorage();
+
+  // Fetch live prices from CoinGecko (free API, no key)
+  fetchCGPrices().then(() => {
+    // After prices loaded, redraw sparklines with updated prices
+    drawPlanSparklines();
+  });
+
+  // Pre-fetch 30-day history for the most common coins
+  ['bitcoin', 'ethereum', 'pax-gold', 'solana'].forEach(cgId => {
+    fetchCGHistory(cgId).then(hist => {
+      if (hist) drawPlanSparklines();
+    });
+  });
 
   // If launched from another prototype with ?asset=xxx, go straight to setup with that asset pre-selected
   const assetParam = urlParams.get('asset');
